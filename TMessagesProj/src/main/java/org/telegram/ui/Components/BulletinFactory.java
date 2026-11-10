@@ -22,6 +22,7 @@ import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import androidx.annotation.CheckResult;
 import androidx.annotation.NonNull;
@@ -102,6 +103,10 @@ public final class BulletinFactory {
     }
     public void showForError(TLRPC.TL_error error, boolean top) {
         if (!LaunchActivity.isActive) return;
+        if (error != null && error.text != null && (error.text.contains("API_ID_INVALID") || error.text.contains("API_ID_PUBLISHED_FLOOD"))) {
+            showForError(error.text, top);
+            return;
+        }
         if (error == null) {
             Bulletin b = createErrorBulletin(LocaleController.formatString(R.string.UnknownError));
             b.hideAfterBottomSheet = false;
@@ -117,6 +122,13 @@ public final class BulletinFactory {
     }
     public void showForError(String errorCode, boolean top) {
         if (!LaunchActivity.isActive) return;
+        if (!TextUtils.isEmpty(errorCode) && (errorCode.contains("API_ID_INVALID") || errorCode.contains("API_ID_PUBLISHED_FLOOD"))) {
+            BaseFragment f = fragment != null ? fragment : LaunchActivity.getLastFragment();
+            Context context = f != null && f.getParentActivity() != null ? f.getParentActivity() : ApplicationLoader.applicationContext;
+            Toast.makeText(context, LocaleController.isRTL ? "מפתחות ה-API שגויים. נא להזין מפתחות תקינים." : "Invalid API keys. Please enter valid keys.", Toast.LENGTH_LONG).show();
+            org.telegram.ui.ApiKeysSetupActivity.openAfterError(f);
+            return;
+        }
         if (TextUtils.isEmpty(errorCode)) {
             Bulletin b = createErrorBulletin(LocaleController.formatString(R.string.UnknownError));
             b.hideAfterBottomSheet = false;

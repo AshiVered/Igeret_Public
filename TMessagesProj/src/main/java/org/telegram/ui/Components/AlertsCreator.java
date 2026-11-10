@@ -290,6 +290,12 @@ public class AlertsCreator {
         if (error == null || error.code == 406 || error.text == null) {
             return null;
         }
+        if (error.text.contains("API_ID_INVALID") || error.text.contains("API_ID_PUBLISHED_FLOOD")) {
+            showSimpleToast(fragment, LocaleController.isRTL ? "מפתחות ה-API שגויים. נא להזין מפתחות תקינים." : "Invalid API keys. Please enter valid keys.");
+            BaseFragment targetFragment = fragment != null ? fragment : LaunchActivity.getLastFragment();
+            org.telegram.ui.ApiKeysSetupActivity.openAfterError(targetFragment);
+            return null;
+        }
         if ("BALANCE_TOO_LOW".equalsIgnoreCase(error.text)) {
             final long price = StarsController.getAllowedPaidStars(request);
             final long dialogId = StarsController.getPeer(request);

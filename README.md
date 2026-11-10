@@ -17,21 +17,28 @@ In settings, after setting up a password, you can:
 
 ## To-Do List
 
+IMPORTANT! dont public this repo, because API keys is aviable in commit history!
 
-
-- [x] 1. Block Telegram ads
-- [ ] 2. Option to block stickers
-- [x] 3. Change the splash screen to display the Igeret logo
-- [ ] 4. Remove all help sections from the settings page
-- [ ] 5. Block stories
-- [ ] 6. Remove the 18+ content toggle from chat settings (already controlled in Control and Management settings)
-- [x] 7. Remove the browser toggle from chat settings
-- [x] 8. Block the built-in browser
-- [x] 9. Write a sign-in and sign-up guide (regarding API keys) and add screenshots.
-- [ ] 10. Write guide for langpacks
-- [x] 11. Change all app icon options in chat settings to Igeret logo (locked to Igeret logo)
-- [ ] 12. Option to block videos in groups and channels (blocking also in allowed channels)
-- [ ] 13. Option to block videos in PMs
+- [x] 1. Fix crahisng afetr input API keys
+- [x] 2. Delete "Open in browser" in API screen
+- [x] 3. Block Telegram ads
+- [ ] 4. Option to block stickers
+- [x] 5. Change the splash screen to display the Igeret logo
+- [ ] 6. Remove all help sections from the settings page
+- [ ] 7. Option to block stories
+- [ ] 8. Remove the 18+ content toggle from chat settings (already controlled in Control and Management settings) ( התחלה לבדוק שכשמפעילים בבקרה וניהול זה מופעל בהגדרות צ'אט ולהיפך. כלומר שההגדרה הזו באמת בתוקף)
+- [x] 9. Remove the browser toggle from chat settings
+- [x] 10. Block the built-in browser
+- [x] 11. Write a sign-in and sign-up guide (regarding API keys) and add screenshots.
+- [ ] 12. Write guide for langpacks
+- [x] 13. Change all app icon options in chat settings to Igeret logo (locked to Igeret logo)
+- [ ] 14. Option to block videos in groups and channels (blocking also in allowed channels)
+- [ ] 15. Option to block videos in PMs
+- [x] 16. If API keys are invalid, return to the API keys setup screen after showing the error toast
+- [x] 17. Change the chats screen top header title from "Telegram" to "Igeret" ("איגרת" in Hebrew)
+- [ ] 18. Add option to block voice messages
+- [ ] 19. Move all new strings from code to res/values/strings.xml and translate to english
+- [ ] 20. Add build-in app updater (Telegram Standalone)
 
 ---
 
@@ -132,5 +139,3 @@ You will require Android Studio 3.4, Android NDK rev. 20 and Android SDK 8.1
 #### Localization
 
 We moved all translations to https://translations.telegram.org/en/android/. Please use it.
-
-To download langpack and include it in your source code, please sea tools/langpack_downloader

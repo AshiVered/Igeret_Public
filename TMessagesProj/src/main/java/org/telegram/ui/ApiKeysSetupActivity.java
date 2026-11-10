@@ -21,12 +21,16 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import org.telegram.messenger.SharedConfig;
-import org.telegram.messenger.browser.Browser;
+import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.INavigationLayout;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
@@ -126,21 +130,7 @@ public class ApiKeysSetupActivity extends BaseFragment {
                 "2. Click on 'API development tools'.\n" +
                 "3. Fill in app title and short name, then click 'Create application'.\n" +
                 "4. Copy your App api_id and App api_hash and paste them below.");
-        instructionsCard.addView(instructionsSteps, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
-
-        // Open Website Button
-        TextView openWebButton = new TextView(context);
-        openWebButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        openWebButton.setTypeface(AndroidUtilities.bold());
-        openWebButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
-        openWebButton.setGravity(Gravity.CENTER);
-        openWebButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(8), Theme.getColor(Theme.key_featuredStickers_addButton), Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
-        openWebButton.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(10), AndroidUtilities.dp(14), AndroidUtilities.dp(10));
-        openWebButton.setText(LocaleController.isRTL ? "פתח את my.telegram.org בדפדפן" : "Open my.telegram.org");
-        openWebButton.setOnClickListener(v -> {
-            Browser.openUrl(getParentActivity(), "https://my.telegram.org");
-        });
-        instructionsCard.addView(openWebButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        instructionsCard.addView(instructionsSteps, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 0));
 
         // Form Card
         LinearLayout formCard = new LinearLayout(context);
@@ -168,8 +158,9 @@ public class ApiKeysSetupActivity extends BaseFragment {
         appIdField.setInputType(InputType.TYPE_CLASS_NUMBER);
         appIdField.setHint(LocaleController.isRTL ? "לדוגמה: 12345678" : "e.g. 12345678");
         appIdField.setLineColors(Theme.getColor(Theme.key_windowBackgroundWhiteInputField), Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated), Theme.getColor(Theme.key_text_RedRegular));
-        if (BuildVars.APP_ID > 0) {
-            appIdField.setText(String.valueOf(BuildVars.APP_ID));
+        int initialAppId = BuildVars.APP_ID > 0 ? BuildVars.APP_ID : SharedConfig.last_entered_app_id;
+        if (initialAppId > 0) {
+            appIdField.setText(String.valueOf(initialAppId));
         }
         formCard.addView(appIdField, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 46, 0, 0, 0, 16));
 
@@ -218,8 +209,9 @@ public class ApiKeysSetupActivity extends BaseFragment {
         appHashField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         appHashField.setHint(LocaleController.isRTL ? "מחרוזת של 32 אותיות ומספרים" : "32 hex characters");
         appHashField.setLineColors(Theme.getColor(Theme.key_windowBackgroundWhiteInputField), Theme.getColor(Theme.key_windowBackgroundWhiteInputFieldActivated), Theme.getColor(Theme.key_text_RedRegular));
-        if (!TextUtils.isEmpty(BuildVars.APP_HASH)) {
-            appHashField.setText(BuildVars.APP_HASH);
+        String initialAppHash = !TextUtils.isEmpty(BuildVars.APP_HASH) ? BuildVars.APP_HASH : SharedConfig.last_entered_app_hash;
+        if (!TextUtils.isEmpty(initialAppHash)) {
+            appHashField.setText(initialAppHash);
         }
         formCard.addView(appHashField, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 46));
 
@@ -289,6 +281,14 @@ public class ApiKeysSetupActivity extends BaseFragment {
             }
         }
 
+        boolean wasInitialized = false;
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (ConnectionsManager.getInstance(a).isInitialized()) {
+                wasInitialized = true;
+                break;
+            }
+        }
+
         // Persist API Keys
         SharedConfig.saveApiKeys(appId, appHashStr);
 
@@ -298,6 +298,18 @@ public class ApiKeysSetupActivity extends BaseFragment {
         if (isFromSettings) {
             Toast.makeText(getParentActivity(), LocaleController.isRTL ? "מפתחות ה-API עודכנו בהצלחה" : "API keys updated successfully", Toast.LENGTH_SHORT).show();
             finishFragment();
+        } else if (wasInitialized) {
+            Activity activity = getParentActivity();
+            if (activity != null) {
+                final PackageManager pm = activity.getPackageManager();
+                final Intent intent = pm.getLaunchIntentForPackage(activity.getPackageName());
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    activity.startActivity(intent);
+                    activity.finishAffinity();
+                    Runtime.getRuntime().exit(0);
+                }
+            }
         } else {
             BaseFragment nextFragment;
             if (LoginActivity.loadCurrentState(false, currentAccount).getInt("currentViewNum", 0) != 0) {
@@ -327,5 +339,36 @@ public class ApiKeysSetupActivity extends BaseFragment {
             return false;
         }
         return super.onBackPressed(invoked);
+    }
+
+    public static void openAfterError(BaseFragment fragment) {
+        SharedConfig.clearApiKeys();
+
+        AndroidUtilities.runOnUIThread(new Runnable() {
+            private int attempts = 0;
+
+            @Override
+            public void run() {
+                INavigationLayout layout = fragment != null && fragment.getParentLayout() != null
+                        ? fragment.getParentLayout()
+                        : (LaunchActivity.instance != null ? LaunchActivity.instance.getActionBarLayout() : null);
+
+                if (layout == null) {
+                    return;
+                }
+
+                if (layout.checkTransitionAnimation() && attempts < 10) {
+                    attempts++;
+                    AndroidUtilities.runOnUIThread(this, 100);
+                    return;
+                }
+
+                boolean presented = layout.presentFragment(new INavigationLayout.NavigationParams(new ApiKeysSetupActivity(false)).setRemoveLast(true).setNoAnimation(true));
+                if (!presented) {
+                    layout.removeAllFragments();
+                    layout.addFragmentToStack(new ApiKeysSetupActivity(false));
+                }
+            }
+        });
     }
 }

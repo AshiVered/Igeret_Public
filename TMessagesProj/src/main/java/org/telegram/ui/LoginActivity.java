@@ -1157,6 +1157,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         if (text == null || getParentActivity() == null) {
             return;
         }
+        if (text.contains("API_ID_INVALID") || text.contains("API_ID_PUBLISHED_FLOOD")) {
+            Toast.makeText(getParentActivity(), LocaleController.isRTL ? "מפתחות ה-API שגויים. נא להזין מפתחות תקינים." : "Invalid API keys. Please enter valid keys.", Toast.LENGTH_LONG).show();
+            ApiKeysSetupActivity.openAfterError(LoginActivity.this);
+            return;
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(title);
         builder.setMessage(text);
@@ -3232,6 +3237,10 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                             onBackPressed(true);
                             setPage(VIEW_PHONE_INPUT, true, null, true);
                             needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("CodeExpired", R.string.CodeExpired));
+                        } else if (error.text.contains("API_ID_INVALID") || error.text.contains("API_ID_PUBLISHED_FLOOD")) {
+                            needHideProgress(false);
+                            Toast.makeText(getParentActivity(), LocaleController.isRTL ? "מפתחות ה-API שגויים. נא להזין מפתחות תקינים." : "Invalid API keys. Please enter valid keys.", Toast.LENGTH_LONG).show();
+                            ApiKeysSetupActivity.openAfterError(LoginActivity.this);
                         } else if (error.text.startsWith("FLOOD_WAIT")) {
                             needShowAlert(getString(R.string.RestorePasswordNoEmailTitle), getString("FloodWait", R.string.FloodWait));
                         } else if (error.code != -1000) {
@@ -3464,6 +3473,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         }
                     }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
                 } else if (err != null) {
+                    if (err.contains("API_ID_INVALID") || err.contains("API_ID_PUBLISHED_FLOOD")) {
+                        Toast.makeText(getParentActivity(), LocaleController.isRTL ? "מפתחות ה-API שגויים. נא להזין מפתחות תקינים." : "Invalid API keys. Please enter valid keys.", Toast.LENGTH_LONG).show();
+                        ApiKeysSetupActivity.openAfterError(LoginActivity.this);
+                        return;
+                    }
                     if (BuildVars.DEBUG_VERSION)
                         BulletinFactory.of(LoginActivity.this).showForError(err);
                     return;

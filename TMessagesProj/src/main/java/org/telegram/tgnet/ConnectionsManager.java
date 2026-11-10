@@ -200,13 +200,25 @@ public class ConnectionsManager extends BaseController {
         return localInstance;
     }
 
+    private boolean isInitialized = false;
+
+    public boolean isInitialized() {
+        return isInitialized;
+    }
+
     public ConnectionsManager(int instance) {
         super(instance);
         connectionState = native_getConnectionState(currentAccount);
-        reinitApiId();
+        if (BuildVars.hasValidApiKeys()) {
+            reinitApiId();
+        }
     }
 
     public void reinitApiId() {
+        if (isInitialized || !BuildVars.hasValidApiKeys()) {
+            return;
+        }
+        isInitialized = true;
         String deviceModel;
         String systemLangCode;
         String langCode;
@@ -272,8 +284,12 @@ public class ConnectionsManager extends BaseController {
     public static void onApiKeysUpdated() {
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             ConnectionsManager cm = getInstance(a);
-            cm.reinitApiId();
-            cm.checkConnection();
+            if (!cm.isInitialized && BuildVars.hasValidApiKeys()) {
+                cm.reinitApiId();
+            }
+            if (cm.isInitialized) {
+                cm.checkConnection();
+            }
         }
     }
 
@@ -381,6 +397,9 @@ public class ConnectionsManager extends BaseController {
     }
 
     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+        if (!isInitialized && BuildVars.hasValidApiKeys()) {
+            reinitApiId();
+        }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
         }
@@ -607,6 +626,9 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void checkConnection() {
+        if (!isInitialized) {
+            return;
+        }
         byte selectedStrategy = getIpStrategy();
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("selected ip strategy " + selectedStrategy);

@@ -280,13 +280,32 @@ public class SharedConfig {
     public static HashSet<Long> allowed_channel_ids = new HashSet<>();
     public static int custom_app_id;
     public static String custom_app_hash = "";
+    public static int last_entered_app_id;
+    public static String last_entered_app_hash = "";
 
     public static void saveApiKeys(int appId, String appHash) {
         custom_app_id = appId;
         custom_app_hash = appHash;
+        last_entered_app_id = appId;
+        last_entered_app_hash = appHash;
         BuildVars.APP_ID = appId;
         BuildVars.APP_HASH = appHash;
         saveConfig();
+    }
+
+    public static void clearApiKeys() {
+        if (custom_app_id > 0) {
+            last_entered_app_id = custom_app_id;
+        }
+        if (!TextUtils.isEmpty(custom_app_hash)) {
+            last_entered_app_hash = custom_app_hash;
+        }
+        custom_app_id = 0;
+        custom_app_hash = "";
+        BuildVars.APP_ID = 0;
+        BuildVars.APP_HASH = null;
+        saveConfig();
+        ConnectionsManager.onApiKeysUpdated();
     }
 
     private static String passportConfigJson = "";
@@ -502,6 +521,8 @@ public class SharedConfig {
                 editor.putStringSet("allowed_channel_ids", channelIdStrings);
                 editor.putInt("custom_app_id", custom_app_id);
                 editor.putString("custom_app_hash", custom_app_hash);
+                editor.putInt("last_entered_app_id", last_entered_app_id);
+                editor.putString("last_entered_app_hash", last_entered_app_hash);
 
                 if (pendingAppUpdate != null) {
                     try {
@@ -519,13 +540,13 @@ public class SharedConfig {
                 }
                 editor.putLong("appUpdateCheckTime", lastUpdateCheckTime);
 
-                editor.apply();
+                editor.commit();
 
                 editor = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Context.MODE_PRIVATE).edit();
                 editor.putBoolean("hasEmailLogin", hasEmailLogin);
                 editor.putBoolean("floatingDebugActive", isFloatingDebugActive);
                 editor.putBoolean("record_via_sco", recordViaSco);
-                editor.apply();
+                editor.commit();
             } catch (Exception e) {
                 FileLog.e(e);
             }
@@ -586,6 +607,8 @@ public class SharedConfig {
             }
             custom_app_id = preferences.getInt("custom_app_id", 0);
             custom_app_hash = preferences.getString("custom_app_hash", "");
+            last_entered_app_id = preferences.getInt("last_entered_app_id", custom_app_id);
+            last_entered_app_hash = preferences.getString("last_entered_app_hash", custom_app_hash);
             if (custom_app_id > 0 && !TextUtils.isEmpty(custom_app_hash)) {
                 BuildVars.APP_ID = custom_app_id;
                 BuildVars.APP_HASH = custom_app_hash;
